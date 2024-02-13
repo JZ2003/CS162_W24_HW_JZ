@@ -224,11 +224,7 @@ class LanguageModel(object):
                     ngram = tuple(words[-self.N+1:] + [word])
                 # TODO: given the n-gram, we retrieve its frequency in the training data.
                 #       We update {next_word} and {next_max_freq} under certain conditions.
-                if ngram in self.train_ngram_freq:
-                    ngram_freq = self.train_ngram_freq[ngram]
-                    if ngram_freq > next_max_freq:
-                        next_word = word
-                        next_max_freq = ngram_freq
+                pass
             if next_word is None:
                 break
             words.append(next_word) 
