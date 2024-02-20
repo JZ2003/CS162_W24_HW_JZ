@@ -74,7 +74,7 @@ class LanguageModel(object):
         ngrams = []
         for i in range(len(words)-n+1):
             # TODO: construct a ngram tuple with the first element being {words[i]}
-            
+            ngrams.append(tuple(words[i:i+n]))
             pass
         
         return ngrams
@@ -136,17 +136,24 @@ class LanguageModel(object):
                 # TODO: 
                 # 1. unigram exists and k == 0
                 # 2. unigram does not exist or k > 0
-                
-                pass
-            
+                if self.add_k == 0 and ngram not in self.train_ngram_freq:
+                    log_prob = float("Nan")
+                else:
+                    log_prob += -math.log((self.train_ngram_freq[ngram]+self.add_k ) / (self.word_cnt + self.vocab_size*self.add_k), 2)
+        
+                    
             # case 2: n gram model for n > 1 (Add k smoothing where required)
             elif self.backoff == False:
                 # TODO: (you might require n minus gram here)
                 # 1. when ngram exists and add k = 0
                 # 2. when ngram exists and add k > 0
                 # 3. when ngram does not exists, add k > 0 
+                nminusonegram = ngram[0:-1]
+                if self.add_k == 0 and ngram not in self.train_ngram_freq:
+                    log_prob = float("Nan")
+                else:
+                    log_prob += -math.log((self.train_ngram_freq[ngram]+self.add_k ) / (self.train_n_minus_one_gram_freq[nminusonegram] + self.vocab_size*self.add_k), 2)
                 
-                pass
             
             # Case 3: special case of simple linear interpolation for a trigram (No add k smoothing here)
             elif self.backoff == True:  
@@ -155,13 +162,23 @@ class LanguageModel(object):
                 # you need to find appropriate value of lambda such that p(avg) is highest
                 # or log prob is less negative
                 # deal with 0/0 division as no add one smoothing used
+                _,y,z = ngram
+                l1,l2,l3 = self.lambdas
+                lastTwo = ngram[1:]
+                firstTwo = ngram[:-1]
+                p1 = l1 * ((self.train_ngram_freq[ngram]) / (self.train_n_minus_one_gram_freq[firstTwo])) if firstTwo in self.train_n_minus_one_gram_freq else 0
+                p2 = l2 * ((self.train_n_minus_one_gram_freq[lastTwo]) / self.vocab[y]) if self.vocab[y] != 0 else 0
+                p3 = l3 * (self.vocab[z] / self.word_cnt) if self.word_cnt != 0 else 0
+                pAvg = p1 + p2 + p3
+                logP = -math.log(pAvg,2) if pAvg != 0 else 0
                 
-                pass
+                log_prob += logP                
+                
 
         cnt_ngrams = len(sent_ngrams)
         # TODO: compute sentence-level perplexity
         
-        perplexity = None
+        perplexity = 2**(log_prob/cnt_ngrams)
         return perplexity, log_prob, cnt_ngrams
 
 
@@ -190,10 +207,24 @@ class LanguageModel(object):
        
         # TODO: compute corpus-level perplexity. The equation should be almost the same to 
         #       sentence-level perplexity.
-            
-        perplexity = None
+
+        perplexity = 2**(corpus_log_prob/corpus_cnt_ngrams)
         return perplexity
         
+    def greedy_search(self, max_steps=50):
+        """
+        Generate the most probable sentence by doing greedy search on the model.
+            
+        Args:
+            max_steps (int): the maximum length of the generated sentence (default: 50).
+        Returns:
+            a string of the generated sentence.
+        """
+        ##################################################
+        # Coding Task 4
+        # Implement greedy serach which generates the most 
+        # probable sentence for that n-gram model   
+        ##################################################
     def greedy_search(self, max_steps=50):
         """
         Generate the most probable sentence by doing greedy search on the model.
@@ -224,15 +255,17 @@ class LanguageModel(object):
                     ngram = tuple(words[-self.N+1:] + [word])
                 # TODO: given the n-gram, we retrieve its frequency in the training data.
                 #       We update {next_word} and {next_max_freq} under certain conditions.
-                pass
-            if next_word is None:
-                break
+                if self.train_ngram_freq[ngram] > next_max_freq:
+                    next_word = word
+                    next_max_freq = self.train_ngram_freq[ngram]  
+                              
+                if next_word is None:
+                    break
             words.append(next_word) 
             if next_word == '<eos>':
                 break
 
-        return ' '.join(words)
-                
+        return ' '.join(words)                
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
